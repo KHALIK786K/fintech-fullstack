@@ -1,0 +1,196 @@
+{
+  "info": {
+    "name": "FinTech Banking API",
+    "description": "RTGS & NEFT payment system. Run requests top-to-bottom: Signup/Login sets {{token}} automatically, then create an account, then transfer.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "token", "value": "" },
+    { "key": "sourceAccount", "value": "100000000001" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login (seeded alice)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json && json.token) { pm.collectionVariables.set('token', json.token); }",
+                  "pm.test('got token', function () { pm.expect(json.token).to.be.a('string'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"alice\",\n  \"password\": \"Password123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Signup (new user)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json && json.token) { pm.collectionVariables.set('token', json.token); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/signup",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"charlie\",\n  \"password\": \"Password123\",\n  \"email\": \"charlie@example.com\",\n  \"fullName\": \"Charlie Customer\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Accounts",
+      "item": [
+        {
+          "name": "Create Account",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{baseUrl}}/api/accounts",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accountHolderName\": \"Charlie Customer\",\n  \"openingBalance\": 500000\n}"
+            }
+          }
+        },
+        {
+          "name": "My Accounts",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/api/accounts"
+          }
+        },
+        {
+          "name": "Account by Number",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/api/accounts/{{sourceAccount}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Beneficiaries",
+      "item": [
+        {
+          "name": "Add Beneficiary",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{baseUrl}}/api/beneficiaries",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Bob Customer\",\n  \"accountNumber\": \"100000000002\",\n  \"ifscCode\": \"FINB0001234\",\n  \"bankName\": \"FinBank\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List Beneficiaries",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/api/beneficiaries"
+          }
+        },
+        {
+          "name": "Remove Beneficiary",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/api/beneficiaries/1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Transfers",
+      "item": [
+        {
+          "name": "RTGS Transfer (>= 200000)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{baseUrl}}/api/transfers/rtgs",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sourceAccountNumber\": \"100000000001\",\n  \"destAccountNumber\": \"100000000002\",\n  \"destIfsc\": \"FINB0001234\",\n  \"amount\": 300000,\n  \"remarks\": \"Rent\",\n  \"idempotencyKey\": \"rtgs-demo-001\"\n}"
+            }
+          }
+        },
+        {
+          "name": "NEFT Transfer (queued)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{baseUrl}}/api/transfers/neft",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sourceAccountNumber\": \"100000000001\",\n  \"destAccountNumber\": \"100000000002\",\n  \"destIfsc\": \"FINB0001234\",\n  \"amount\": 5000,\n  \"remarks\": \"Utilities\",\n  \"idempotencyKey\": \"neft-demo-001\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Transactions",
+      "item": [
+        {
+          "name": "Get by Reference",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/api/transactions/RTGS-REPLACE-WITH-REAL-REF"
+          }
+        },
+        {
+          "name": "Account History",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/api/transactions/account/{{sourceAccount}}?page=0&size=20"
+          }
+        }
+      ]
+    }
+  ]
+}
